@@ -3,35 +3,41 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Interactive LED Message Board", layout="centered")
 
-st.markdown(
-    """
-    <style>
-    body {background-color: #111;}
-    canvas {
-        background-color: #111;
-        display: block;
-        margin: 0 auto;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+st.markdown("""
+<style>
+body {
+    background-color: #111;
+}
+canvas {
+    background-color: #111;
+    display: block;
+    margin: 0 auto;
+}
+</style>
+""", unsafe_allow_html=True)
 
 html_code = """
-<canvas id="ledBoard" width="900" height="140"></canvas>
+<canvas id="ledBoard" width="1200" height="160"></canvas>
 <script>
 const canvas = document.getElementById('ledBoard');
 const ctx = canvas.getContext('2d');
-const rows = 7, cols = 5, blocks = 10;
-const dot = 15, spacing = 5;
+
+// --- Adjustable layout ---
+const rows = 7, cols = 5;
+const blocks = 20;             // how many character cells across
+const dot = 10;                // dot diameter (smaller = fits more)
+const spacing = 3;             // space between dots
+const blockSpacing = 6;        // space between character blocks
+
 const blockW = cols * (dot + spacing);
 const blockH = rows * (dot + spacing);
 const onColor = "#FFD940";
-const offColor = "#303030";
+const offColor = "#2c2c2c";
 
 let characters = Array(blocks).fill(" ");
 let activeBlock = -1;
 
+// draw one character cell
 function drawLED(char, xOffset) {
   const temp = document.createElement("canvas");
   temp.width = cols * 10;
@@ -63,10 +69,11 @@ function drawLED(char, xOffset) {
   }
 }
 
+// draw the whole board
 function drawBoard() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (let i = 0; i < blocks; i++) {
-    const x = i * (blockW + spacing*2);
+    const x = i * (blockW + blockSpacing);
     drawLED(characters[i], x);
     if (i === activeBlock) {
       ctx.strokeStyle = "#FFD940";
@@ -77,13 +84,15 @@ function drawBoard() {
 }
 drawBoard();
 
+// detect clicks
 canvas.addEventListener("click", e => {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
-  activeBlock = Math.floor(x / (blockW + spacing*2));
+  activeBlock = Math.floor(x / (blockW + blockSpacing));
   drawBoard();
 });
 
+// listen for keypresses
 document.addEventListener("keydown", e => {
   if (activeBlock >= 0) {
     let key = e.key;
@@ -99,4 +108,4 @@ document.addEventListener("keydown", e => {
 });
 </script>
 """
-components.html(html_code, height=200)
+components.html(html_code, height=220)
