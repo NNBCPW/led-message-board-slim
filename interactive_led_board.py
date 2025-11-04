@@ -190,19 +190,27 @@ function backspace(){
 
 // ---------- TYPING ----------
 document.addEventListener("keydown", (e)=>{
-  // ignore typing until a tile is selected
   if(active.r < 0) return;
 
   if(e.key === "Backspace"){ e.preventDefault(); backspace(); return; }
   if(e.key === "Enter"){ active.c = 0; active.r = Math.min(active.r+1, ROWS-1); drawBoard(); return; }
   if(e.key === " "){ e.preventDefault(); advance(); return; }
 
-  // printable
+  // --- expanded printable support ---
   if(e.key.length === 1){
-    const ch = e.key.toUpperCase();
-    if(FONT[ch]){ chars[active.r][active.c] = ch; advance(); }
+    let ch = e.key;
+    // convert letters to uppercase so they use existing FONT patterns
+    if(/[a-z]/.test(ch)) ch = ch.toUpperCase();
+
+    // if character exists in font, use it; if not, ignore gracefully
+    if (FONT[ch]) {
+      chars[active.r][active.c] = ch;
+      advance();
+      drawBoard();
+    }
   }
 });
+
 </script>
 """
 
