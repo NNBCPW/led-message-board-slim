@@ -1,50 +1,51 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="LED Message Board", layout="centered")
+st.set_page_config(page_title="LED Board", layout="centered")
 
-# --- global CSS ---
 st.markdown("""
 <style>
 body {
-  background-color: #0d0d0d;
+  background-color: #0a0a0a;
 }
 canvas {
-  background-color: #111;
+  background-color: #0a0a0a;
   display: block;
   margin: 0 auto;
-  border-radius: 20px;
-  box-shadow: inset 0 0 40px #000;
+  border-radius: 16px;
+  box-shadow: inset 0 0 50px #000;
 }
 </style>
 """, unsafe_allow_html=True)
 
 html_code = """
-<canvas id="ledBoard" width="1360" height="540"></canvas>
+<canvas id="ledBoard" width="1100" height="400"></canvas>
 <script>
 const canvas = document.getElementById('ledBoard');
 const ctx = canvas.getContext('2d');
 
-// panel + LED sizing tuned to match reference layout
+// Grid setup: 4 rows x 10 columns
 const rowsPerBlock = 7;
 const colsPerBlock = 5;
-const totalRows = 6;
+const totalRows = 4;
 const totalCols = 10;
-const dot = 9;             // LED size
-const spacing = 4;         // space between LEDs
-const blockSpacing = 16;   // space between panels
+
+// LED and spacing values tuned to your reference image
+const dot = 10;
+const spacing = 4;
+const blockSpacing = 16;
 const blockW = colsPerBlock * (dot + spacing);
 const blockH = rowsPerBlock * (dot + spacing);
 
 const onColor = "#FFD940";
-const offColor = "#262626";
-const panelColor = "#141414";
-const borderColor = "#0b0b0b";
+const offColor = "#1e1e1e";
+const panelColor = "#121212";
+const borderColor = "#090909";
 
 let boardChars = Array(totalRows).fill(0).map(()=>Array(totalCols).fill(" "));
-let activeRow=-1, activeCol=-1;
+let activeRow = -1, activeCol = -1;
 
-// basic 7x5 font (extendable)
+// Basic 7x5 font
 const FONT = {
  "A":["01110","10001","10001","11111","10001","10001","10001"],
  "B":["11110","10001","11110","10001","10001","10001","11110"],
@@ -86,9 +87,8 @@ function drawLED(x,y,on){
 }
 
 function drawPanel(char,xOffset,yOffset){
- // panel background
  ctx.fillStyle = panelColor;
- ctx.fillRect(xOffset-4,yOffset-4,blockW+8,blockH+8);
+ ctx.fillRect(xOffset-5,yOffset-5,blockW+10,blockH+10);
  const pattern = FONT[char] || FONT[" "];
  for(let r=0;r<rowsPerBlock;r++){
    for(let c=0;c<colsPerBlock;c++){
@@ -98,23 +98,23 @@ function drawPanel(char,xOffset,yOffset){
    }
  }
  ctx.strokeStyle = borderColor;
- ctx.lineWidth = 1.3;
- ctx.strokeRect(xOffset-4,yOffset-4,blockW+8,blockH+8);
+ ctx.lineWidth = 1.2;
+ ctx.strokeRect(xOffset-5,yOffset-5,blockW+10,blockH+10);
 }
 
 function drawBoard(){
  ctx.clearRect(0,0,canvas.width,canvas.height);
- let startX=40;
- let startY=40;
+ const startX = 40;
+ const startY = 40;
  for(let row=0;row<totalRows;row++){
    for(let col=0;col<totalCols;col++){
-     const x=startX + col*(blockW+blockSpacing);
-     const y=startY + row*(blockH+blockSpacing);
+     const x = startX + col*(blockW+blockSpacing);
+     const y = startY + row*(blockH+blockSpacing);
      drawPanel(boardChars[row][col],x,y);
      if(row===activeRow && col===activeCol){
        ctx.strokeStyle="#FFD940";
        ctx.lineWidth=2;
-       ctx.strokeRect(x-4,y-4,blockW+8,blockH+8);
+       ctx.strokeRect(x-5,y-5,blockW+10,blockH+10);
      }
    }
  }
@@ -146,4 +146,4 @@ document.addEventListener("keydown",e=>{
 });
 </script>
 """
-components.html(html_code,height=600)
+components.html(html_code,height=450)
