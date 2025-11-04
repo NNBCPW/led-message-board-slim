@@ -1,7 +1,9 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# --- MATCH EXACT GEOMETRY FROM FLASHING BOARD ---
+# ---------------------------------------------------
+# INTERACTIVE LED MESSAGE BOARD  (Matches Flashing Layout)
+# ---------------------------------------------------
 st.set_page_config(page_title="Interactive LED Board", layout="centered")
 
 st.markdown("""
@@ -19,32 +21,34 @@ canvas {
 </style>
 """, unsafe_allow_html=True)
 
+# ---------------------------------------------------
+# HTML + JS
+# ---------------------------------------------------
 html_code = """
 <canvas id="ledBoard"></canvas>
 <script>
 // ---------- COLORS ----------
 const LED_ON      = "#F9ED32";   // yellow
 const LED_OFF     = "#3B3C3D";   // dark gray
-const BG_COLOR    = "#141414";   // black background
-const GAP_LINE    = "#222222";   // faint gray between tiles
+const BG_COLOR    = "#141414";   // background
+const GAP_LINE    = "#222222";   // faint gray
 
 // ---------- GRID / TILE GEOMETRY ----------
 const ROWS = 4, COLS = 10;
 const DOT_W = 5, DOT_H = 7;
-
 const DOT_SIZE  = 10;
 const DOT_GAP   = 4;
 const TILE_PAD  = 6;
 const TILE_GAP  = 6;
 const OUTER_PAD = 10;
 
-// Derived sizes (identical to flashing board)
+// ---------- DERIVED SIZES ----------
 function tileInnerW(){ return DOT_W * DOT_SIZE + (DOT_W - 1) * DOT_GAP; }
 function tileInnerH(){ return DOT_H * DOT_SIZE + (DOT_H - 1) * DOT_GAP; }
 function tileW(){ return tileInnerW() + TILE_PAD * 2; }
 function tileH(){ return tileInnerH() + TILE_PAD * 2; }
 
-const TILE_WIDTH = tileW();
+const TILE_WIDTH  = tileW();
 const TILE_HEIGHT = tileH();
 
 const BOARD_WIDTH  = OUTER_PAD * 2 + COLS * TILE_WIDTH  + (COLS - 1) * TILE_GAP;
@@ -53,7 +57,7 @@ const BOARD_HEIGHT = OUTER_PAD * 2 + ROWS * TILE_HEIGHT + (ROWS - 1) * TILE_GAP;
 const canvas = document.getElementById("ledBoard");
 const ctx = canvas.getContext("2d");
 
-// Perfect pixel-fit, extra padding for shadows
+// Perfect fit to match flashing board
 canvas.width  = BOARD_WIDTH + 8;
 canvas.height = BOARD_HEIGHT + 8;
 canvas.style.width  = (BOARD_WIDTH + 8) + "px";
@@ -104,7 +108,7 @@ const FONT = {
 let chars = Array(ROWS).fill(0).map(()=>Array(COLS).fill(" "));
 let active = {r:-1,c:-1};
 
-// --- DRAW FUNCTIONS ---
+// ---------- DRAW ----------
 function drawDot(x, y, on) {
   ctx.beginPath();
   ctx.arc(x + DOT_SIZE/2, y + DOT_SIZE/2, DOT_SIZE/2, 0, 2*Math.PI);
@@ -148,7 +152,7 @@ function drawBoard() {
 }
 drawBoard();
 
-// --- CLICK TO SELECT TILE ---
+// ---------- CLICK TO SELECT ----------
 canvas.addEventListener("click", (e)=>{
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left - OUTER_PAD;
@@ -161,7 +165,7 @@ canvas.addEventListener("click", (e)=>{
   }
 });
 
-// --- TYPE TO LIGHT UP TILE ---
+// ---------- TYPE TO LIGHT TILE ----------
 document.addEventListener("keydown", (e)=>{
   if (active.r >= 0 && active.c >= 0) {
     const key = e.key;
@@ -183,4 +187,5 @@ document.addEventListener("keydown", (e)=>{
 </script>
 """
 
-components.html(html_code, height=BOARD_HEIGHT + 60)
+# fixed canvas height that matches your flashing board geometry
+components.html(html_code, height=462)
