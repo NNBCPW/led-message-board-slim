@@ -19,9 +19,9 @@ canvas {
 """, unsafe_allow_html=True)
 
 html_code = """
-<canvas id="ledBoard" width="640" height="260"></canvas>
+<canvas id="ledBoard"></canvas>
 <script>
-// --- matching your layout exactly ---
+// --- matching your flashing board geometry exactly ---
 const canvas = document.getElementById('ledBoard');
 const ctx = canvas.getContext('2d');
 
@@ -47,13 +47,18 @@ function tileH() { return tileInnerH() + TILE_PAD * 2; }
 
 const TILE_WIDTH = tileW();
 const TILE_HEIGHT = tileH();
-const BOARD_WIDTH = OUTER_PAD * 2 + COLS * TILE_WIDTH + (COLS - 1) * TILE_GAP;
-const BOARD_HEIGHT = OUTER_PAD * 2 + ROWS * TILE_HEIGHT + (ROWS - 1) * TILE_GAP;
 
-canvas.width = BOARD_WIDTH;
-canvas.height = BOARD_HEIGHT;
+// ---- Correct the canvas size so nothing clips ----
+const BOARD_WIDTH  = OUTER_PAD * 2 + COLS * (TILE_WIDTH)  + (COLS - 1) * TILE_GAP;
+const BOARD_HEIGHT = OUTER_PAD * 2 + ROWS * (TILE_HEIGHT) + (ROWS - 1) * TILE_GAP;
 
-// 5x7 font map (copied from your LED version)
+// add small buffer to ensure shadows and borders are fully visible
+canvas.width  = BOARD_WIDTH + 8;
+canvas.height = BOARD_HEIGHT + 8;
+canvas.style.width  = (BOARD_WIDTH + 8) + "px";
+canvas.style.height = (BOARD_HEIGHT + 8) + "px";
+
+// 5x7 font map from your flashing board
 const FONT = {
  " ": ["00000","00000","00000","00000","00000","00000","00000"],
  "A": ["01110","10001","11111","10001","10001","10001","10001"],
@@ -66,14 +71,22 @@ const FONT = {
  "H": ["10001","10001","11111","10001","10001","10001","10001"],
  "I": ["01110","00100","00100","00100","00100","00100","01110"],
  "J": ["00001","00001","00001","10001","10001","10001","01110"],
+ "K": ["10001","10010","11100","10100","10010","10001","10001"],
  "L": ["10000","10000","10000","10000","10000","10000","11111"],
+ "M": ["10001","11011","10101","10101","10001","10001","10001"],
+ "N": ["10001","11001","10101","10011","10001","10001","10001"],
  "O": ["01110","10001","10001","10001","10001","10001","01110"],
  "P": ["11110","10001","11110","10000","10000","10000","10000"],
+ "Q": ["01110","10001","10001","10001","10101","10010","01101"],
  "R": ["11110","10001","11110","10100","10010","10001","10001"],
  "S": ["01111","10000","10000","01110","00001","00001","11110"],
  "T": ["11111","00100","00100","00100","00100","00100","00100"],
  "U": ["10001","10001","10001","10001","10001","10001","01110"],
+ "V": ["10001","10001","10001","01010","01010","00100","00100"],
+ "W": ["10001","10001","10101","10101","10101","11011","10001"],
+ "X": ["10001","01010","00100","00100","00100","01010","10001"],
  "Y": ["10001","01010","00100","00100","00100","00100","00100"],
+ "Z": ["11111","00001","00010","00100","01000","10000","11111"],
  "-": ["00000","00000","00000","11111","00000","00000","00000"],
  "0": ["01110","10001","10011","10101","11001","10001","01110"],
  "1": ["00100","01100","00100","00100","00100","00100","01110"],
@@ -98,7 +111,7 @@ function drawDot(x, y, on) {
   ctx.fill();
 }
 
-// draw tile with border
+// draw one tile
 function drawTile(ch, x, y) {
   ctx.fillStyle = "#141414";
   ctx.fillRect(x, y, TILE_WIDTH, TILE_HEIGHT);
@@ -116,7 +129,7 @@ function drawTile(ch, x, y) {
   }
 }
 
-// redraw everything
+// redraw board
 function drawBoard() {
   ctx.fillStyle = BG_COLOR;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -172,4 +185,5 @@ document.addEventListener("keydown", (e) => {
 });
 </script>
 """
-components.html(html_code, height=300)
+
+components.html(html_code, height=400)
