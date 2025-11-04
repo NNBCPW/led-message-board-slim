@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
+# --- MATCH EXACT GEOMETRY FROM FLASHING BOARD ---
 st.set_page_config(page_title="Interactive LED Board", layout="centered")
 
 st.markdown("""
@@ -21,15 +22,13 @@ canvas {
 html_code = """
 <canvas id="ledBoard"></canvas>
 <script>
-// --- matching your flashing board geometry exactly ---
-const canvas = document.getElementById('ledBoard');
-const ctx = canvas.getContext('2d');
+// ---------- COLORS ----------
+const LED_ON      = "#F9ED32";   // yellow
+const LED_OFF     = "#3B3C3D";   // dark gray
+const BG_COLOR    = "#141414";   // black background
+const GAP_LINE    = "#222222";   // faint gray between tiles
 
-const LED_ON  = "#F9ED32";
-const LED_OFF = "#3B3C3D";
-const BG_COLOR = "#141414";
-const GAP_LINE = "#222";
-
+// ---------- GRID / TILE GEOMETRY ----------
 const ROWS = 4, COLS = 10;
 const DOT_W = 5, DOT_H = 7;
 
@@ -39,26 +38,28 @@ const TILE_PAD  = 6;
 const TILE_GAP  = 6;
 const OUTER_PAD = 10;
 
-// derived geometry
-function tileInnerW() { return DOT_W * DOT_SIZE + (DOT_W - 1) * DOT_GAP; }
-function tileInnerH() { return DOT_H * DOT_SIZE + (DOT_H - 1) * DOT_GAP; }
-function tileW() { return tileInnerW() + TILE_PAD * 2; }
-function tileH() { return tileInnerH() + TILE_PAD * 2; }
+// Derived sizes (identical to flashing board)
+function tileInnerW(){ return DOT_W * DOT_SIZE + (DOT_W - 1) * DOT_GAP; }
+function tileInnerH(){ return DOT_H * DOT_SIZE + (DOT_H - 1) * DOT_GAP; }
+function tileW(){ return tileInnerW() + TILE_PAD * 2; }
+function tileH(){ return tileInnerH() + TILE_PAD * 2; }
 
 const TILE_WIDTH = tileW();
 const TILE_HEIGHT = tileH();
 
-// ---- Correct the canvas size so nothing clips ----
-const BOARD_WIDTH  = OUTER_PAD * 2 + COLS * (TILE_WIDTH)  + (COLS - 1) * TILE_GAP;
-const BOARD_HEIGHT = OUTER_PAD * 2 + ROWS * (TILE_HEIGHT) + (ROWS - 1) * TILE_GAP;
+const BOARD_WIDTH  = OUTER_PAD * 2 + COLS * TILE_WIDTH  + (COLS - 1) * TILE_GAP;
+const BOARD_HEIGHT = OUTER_PAD * 2 + ROWS * TILE_HEIGHT + (ROWS - 1) * TILE_GAP;
 
-// add small buffer to ensure shadows and borders are fully visible
+const canvas = document.getElementById("ledBoard");
+const ctx = canvas.getContext("2d");
+
+// Perfect pixel-fit, extra padding for shadows
 canvas.width  = BOARD_WIDTH + 8;
 canvas.height = BOARD_HEIGHT + 8;
 canvas.style.width  = (BOARD_WIDTH + 8) + "px";
 canvas.style.height = (BOARD_HEIGHT + 8) + "px";
 
-// 5x7 font map from your flashing board
+// ---------- 5x7 FONT ----------
 const FONT = {
  " ": ["00000","00000","00000","00000","00000","00000","00000"],
  "A": ["01110","10001","11111","10001","10001","10001","10001"],
@@ -100,20 +101,19 @@ const FONT = {
  "9": ["01110","10001","10001","01111","00001","00001","01110"]
 };
 
-let chars = Array(ROWS).fill(0).map(() => Array(COLS).fill(" "));
+let chars = Array(ROWS).fill(0).map(()=>Array(COLS).fill(" "));
 let active = {r:-1,c:-1};
 
-// draw LED dot
+// --- DRAW FUNCTIONS ---
 function drawDot(x, y, on) {
   ctx.beginPath();
-  ctx.arc(x + DOT_SIZE/2, y + DOT_SIZE/2, DOT_SIZE/2, 0, 2 * Math.PI);
+  ctx.arc(x + DOT_SIZE/2, y + DOT_SIZE/2, DOT_SIZE/2, 0, 2*Math.PI);
   ctx.fillStyle = on ? LED_ON : LED_OFF;
   ctx.fill();
 }
 
-// draw one tile
 function drawTile(ch, x, y) {
-  ctx.fillStyle = "#141414";
+  ctx.fillStyle = BG_COLOR;
   ctx.fillRect(x, y, TILE_WIDTH, TILE_HEIGHT);
   ctx.strokeStyle = GAP_LINE;
   ctx.strokeRect(x, y, TILE_WIDTH, TILE_HEIGHT);
@@ -129,7 +129,6 @@ function drawTile(ch, x, y) {
   }
 }
 
-// redraw board
 function drawBoard() {
   ctx.fillStyle = BG_COLOR;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -139,7 +138,6 @@ function drawBoard() {
       const x = OUTER_PAD + c * (TILE_WIDTH + TILE_GAP);
       const y = OUTER_PAD + r * (TILE_HEIGHT + TILE_GAP);
       drawTile(chars[r][c], x, y);
-
       if (active.r === r && active.c === c) {
         ctx.lineWidth = 2;
         ctx.strokeStyle = LED_ON;
@@ -150,8 +148,8 @@ function drawBoard() {
 }
 drawBoard();
 
-// click detection
-canvas.addEventListener("click", (e) => {
+// --- CLICK TO SELECT TILE ---
+canvas.addEventListener("click", (e)=>{
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left - OUTER_PAD;
   const y = e.clientY - rect.top - OUTER_PAD;
@@ -163,8 +161,8 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
-// keyboard typing
-document.addEventListener("keydown", (e) => {
+// --- TYPE TO LIGHT UP TILE ---
+document.addEventListener("keydown", (e)=>{
   if (active.r >= 0 && active.c >= 0) {
     const key = e.key;
     if (key === "Backspace") {
@@ -176,7 +174,6 @@ document.addEventListener("keydown", (e) => {
       const upper = key.toUpperCase();
       if (FONT[upper]) {
         chars[active.r][active.c] = upper;
-        // move right automatically
         active.c = Math.min(active.c + 1, COLS - 1);
         drawBoard();
       }
@@ -186,4 +183,4 @@ document.addEventListener("keydown", (e) => {
 </script>
 """
 
-components.html(html_code, height=400)
+components.html(html_code, height=BOARD_HEIGHT + 60)
