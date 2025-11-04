@@ -2,15 +2,13 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # ---------------------------------------------------
-# INTERACTIVE LED MESSAGE BOARD — Compact Edition
+# INTERACTIVE LED MESSAGE BOARD — Compact, Full Keyboard
 # ---------------------------------------------------
 st.set_page_config(page_title="Interactive LED Board", layout="centered")
 
 st.markdown("""
 <style>
-body {
-  background-color: #141414;
-}
+body { background-color: #141414; }
 canvas {
   background-color: #141414;
   display: block;
@@ -18,10 +16,19 @@ canvas {
   border-radius: 12px;
   box-shadow: inset 0 0 30px #000;
 }
+/* Hidden input to enable mobile keyboards */
+#hidden-led-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  height: 0;
+  width: 0;
+}
 </style>
 """, unsafe_allow_html=True)
 
 html_code = """
+<input id="hidden-led-input" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
 <canvas id="ledBoard"></canvas>
 <script>
 // ---------- COLORS ----------
@@ -45,55 +52,96 @@ const BH=OUTER_PAD*2+ROWS*TH+(ROWS-1)*TILE_GAP;
 
 const c=document.getElementById("ledBoard");
 const ctx=c.getContext("2d");
-c.width=BW; c.height=BH;
-c.style.width="640px";     // <<—— matches flashing board visual size
-c.style.height=(BH*640/BW)+"px";
+c.width=BW; 
+c.height=BH;
 
-// ---------- FONT ----------
-const FONT={
-" ":["00000","00000","00000","00000","00000","00000","00000"],
-"A":["01110","10001","11111","10001","10001","10001","10001"],
-"B":["11110","10001","11110","10001","10001","10001","11110"],
-"C":["01110","10001","10000","10000","10000","10001","01110"],
-"D":["11110","10001","10001","10001","10001","10001","11110"],
-"E":["11111","10000","11110","10000","10000","10000","11111"],
-"F":["11111","10000","11110","10000","10000","10000","10000"],
-"G":["01110","10001","10000","10111","10001","10001","01110"],
-"H":["10001","10001","11111","10001","10001","10001","10001"],
-"I":["01110","00100","00100","00100","00100","00100","01110"],
-"J":["00001","00001","00001","10001","10001","10001","01110"],
-"K":["10001","10010","11100","10100","10010","10001","10001"],
-"L":["10000","10000","10000","10000","10000","10000","11111"],
-"M":["10001","11011","10101","10101","10001","10001","10001"],
-"N":["10001","11001","10101","10011","10001","10001","10001"],
-"O":["01110","10001","10001","10001","10001","10001","01110"],
-"P":["11110","10001","11110","10000","10000","10000","10000"],
-"Q":["01110","10001","10001","10001","10101","10010","01101"],
-"R":["11110","10001","11110","10100","10010","10001","10001"],
-"S":["01111","10000","10000","01110","00001","00001","11110"],
-"T":["11111","00100","00100","00100","00100","00100","00100"],
-"U":["10001","10001","10001","10001","10001","10001","01110"],
-"V":["10001","10001","10001","01010","01010","00100","00100"],
-"W":["10001","10001","10101","10101","10101","11011","10001"],
-"X":["10001","01010","00100","00100","00100","01010","10001"],
-"Y":["10001","01010","00100","00100","00100","00100","00100"],
-"Z":["11111","00001","00010","00100","01000","10000","11111"],
-"-":["00000","00000","00000","11111","00000","00000","00000"],
-"0":["01110","10001","10011","10101","11001","10001","01110"],
-"1":["00100","01100","00100","00100","00100","00100","01110"],
-"2":["01110","10001","00001","00110","01000","10000","11111"],
-"3":["01110","10001","00001","00110","00001","10001","01110"],
-"4":["10010","10010","10010","11111","00010","00010","00010"],
-"5":["11111","10000","11110","00001","00001","10001","01110"],
-"6":["01110","10000","11110","10001","10001","10001","01110"],
-"7":["11111","00001","00010","00100","01000","01000","01000"],
-"8":["01110","10001","01110","10001","10001","10001","01110"],
-"9":["01110","10001","10001","01111","00001","00001","01110"]
-};
+// Compact visual size to match your flashing board
+const TARGET_W = 640;
+c.style.width = TARGET_W + "px";
+c.style.height = (BH * TARGET_W / BW) + "px";
 
+// Hidden input for mobile keyboards
+const hiddenInput = document.getElementById("hidden-led-input");
+
+// Board state
 let chars=Array(ROWS).fill().map(()=>Array(COLS).fill(" "));
 let active={r:-1,c:-1};
 
+// Cache for dynamically generated 5x7 patterns
+const patternCache = new Map();
+
+// ----- Render a character into a 5x7 pattern dynamically -----
+// This supports *all printable* characters by rasterizing a font and sampling into the 5x7 grid.
+function patternForChar(ch) {
+  if (patternCache.has(ch)) return patternCache.get(ch);
+
+  // Render char to an offscreen canvas at higher res, then downsample
+  const scale = 12; // pixels per dot
+  const W = DOT_W * scale;
+  const H = DOT_H * scale;
+  const t = document.createElement("canvas");
+  t.width = W; t.height = H;
+  const tctx = t.getContext("2d");
+
+  // Fill bg
+  tctx.fillStyle = "black";
+  tctx.fillRect(0,0,W,H);
+
+  // Choose a font and size that fills the box nicely
+  // We'll iterate a couple sizes to get good coverage without clipping.
+  const candidates = [H*0.95, H*0.9, H*0.85];
+  let metrics, usedSize = candidates[candidates.length-1];
+  tctx.textAlign = "center";
+  tctx.textBaseline = "middle";
+  tctx.fillStyle = "white";
+  for (let sz of candidates) {
+    tctx.clearRect(0,0,W,H);
+    tctx.fillRect(0,0,W,H); // bg black first
+    tctx.globalCompositeOperation = "source-over";
+    tctx.fillStyle = "white";
+    tctx.font = `bold ${Math.floor(sz)}px monospace`;
+    tctx.fillText(ch, W/2, H/2 + H*0.04); // slight vertical nudge
+    // See how many white pixels we got
+    const img = tctx.getImageData(0,0,W,H).data;
+    let count = 0;
+    for (let i=0; i<img.length; i+=4) if (img[i] > 127) count++;
+    if (count > (W*H*0.05)) { usedSize = sz; break; } // enough pixels lit
+  }
+
+  // Draw final with chosen size
+  tctx.clearRect(0,0,W,H);
+  tctx.fillStyle = "black";
+  tctx.fillRect(0,0,W,H);
+  tctx.fillStyle = "white";
+  tctx.font = `bold ${Math.floor(usedSize)}px monospace`;
+  tctx.textAlign = "center";
+  tctx.textBaseline = "middle";
+  tctx.fillText(ch, W/2, H/2 + H*0.04);
+
+  const img = tctx.getImageData(0,0,W,H).data;
+
+  // Downsample to 5x7 by checking if any pixel in each cell is lit
+  const pattern = [];
+  for (let gy=0; gy<DOT_H; gy++) {
+    let rowBits = "";
+    for (let gx=0; gx<DOT_W; gx++) {
+      let on = false;
+      for (let py=gy*scale; py<(gy+1)*scale && !on; py++) {
+        for (let px=gx*scale; px<(gx+1)*scale; px++) {
+          const idx = (py*W + px) * 4;
+          if (img[idx] > 127) { on = true; break; }
+        }
+      }
+      rowBits += on ? "1" : "0";
+    }
+    pattern.push(rowBits);
+  }
+
+  patternCache.set(ch, pattern);
+  return pattern;
+}
+
+// ----- Drawing helpers -----
 function drawDot(x,y,on){
   ctx.beginPath();
   ctx.arc(x+DOT_SIZE/2,y+DOT_SIZE/2,DOT_SIZE/2,0,2*Math.PI);
@@ -105,7 +153,8 @@ function drawTile(ch,x,y){
   ctx.fillRect(x,y,TW,TH);
   ctx.strokeStyle=GAP_LINE;
   ctx.strokeRect(x,y,TW,TH);
-  const p=FONT[ch]||FONT[" "];
+
+  const p = (ch === " ")? Array(DOT_H).fill("00000") : patternForChar(ch);
   for(let gy=0;gy<DOT_H;gy++){
     for(let gx=0;gx<DOT_W;gx++){
       const on=p[gy][gx]==="1";
@@ -133,26 +182,101 @@ function drawBoard(){
 }
 drawBoard();
 
+// ----- Selection helpers -----
+function advanceCursor() {
+  if (active.r < 0) return;
+  if (active.c < COLS - 1) {
+    active.c += 1;
+  } else if (active.r < ROWS - 1) {
+    active.r += 1;
+    active.c = 0;
+  } // else stick at last tile
+}
+function moveToPrev() {
+  if (active.r < 0) return;
+  if (active.c > 0) {
+    active.c -= 1;
+  } else if (active.r > 0) {
+    active.r -= 1;
+    active.c = COLS - 1;
+  }
+}
+
+// ----- Click selection with scaling fix -----
 c.addEventListener("click",e=>{
   const rect=c.getBoundingClientRect();
-  const x=e.clientX-rect.left-OUTER_PAD;
-  const y=e.clientY-rect.top-OUTER_PAD;
+  const scaleX = c.width / rect.width;
+  const scaleY = c.height / rect.height;
+  const x=(e.clientX-rect.left)*scaleX - OUTER_PAD;
+  const y=(e.clientY-rect.top )*scaleY - OUTER_PAD;
   const col=Math.floor(x/(TW+TILE_GAP));
   const r=Math.floor(y/(TH+TILE_GAP));
-  if(r>=0&&r<ROWS&&col>=0&&col<COLS){active={r:r,c:col};drawBoard();}
+  if(r>=0&&r<ROWS&&col>=0&&col<COLS){
+    active={r:r,c:col};
+    drawBoard();
+    // Focus hidden input so mobile shows a keyboard
+    hiddenInput.value = "";
+    hiddenInput.focus({preventScroll:true});
+  }
 });
 
-document.addEventListener("keydown",e=>{
-  if(active.r<0)return;
-  const key=e.key;
-  if(key==="Backspace"){chars[active.r][active.c]=" ";drawBoard();return;}
-  if(key.length===1){
-    const u=key.toUpperCase();
-    if(FONT[u]){chars[active.r][active.c]=u;active.c=Math.min(active.c+1,COLS-1);drawBoard();}
+// ----- Keyboard input handling -----
+// Desktop: keydown; Mobile: use hidden input's input event
+document.addEventListener("keydown", e => {
+  // Ensure we only act when a tile is active
+  if (active.r < 0) return;
+
+  if (e.key === "Backspace") {
+    e.preventDefault();
+    chars[active.r][active.c] = " ";
+    drawBoard();
+    return;
+  }
+  if (e.key === " " || e.code === "Space") {
+    e.preventDefault();
+    chars[active.r][active.c] = " ";
+    advanceCursor();
+    drawBoard();
+    return;
+  }
+
+  // Printable single characters (letters, numbers, punctuation, symbols)
+  if (e.key && e.key.length === 1) {
+    const ch = e.key; // keep exact character (case + symbol)
+    chars[active.r][active.c] = ch;
+    advanceCursor();
+    drawBoard();
+  }
+});
+
+// Mobile text entry via hidden input (captures all printable chars)
+hiddenInput.addEventListener("input", e => {
+  if (active.r < 0) return;
+  const v = hiddenInput.value;
+  if (!v) return;
+  const ch = v.slice(-1); // use last typed char
+  // treat space specially per your rule
+  if (ch === " ") {
+    chars[active.r][active.c] = " ";
+    advanceCursor();
+    drawBoard();
+  } else if (ch.length === 1) {
+    chars[active.r][active.c] = ch;
+    advanceCursor();
+    drawBoard();
+  }
+  // keep input small
+  hiddenInput.value = "";
+});
+
+// Optional: tap anywhere outside to blur the hidden input
+document.addEventListener("click", e => {
+  if (e.target !== c && e.target !== hiddenInput) {
+    // do nothing; keeping focus helps mobile input flow
   }
 });
 </script>
 """
 
-# perfectly compact render (same width as flashing board)
+# compact render height proportional to 640px width
 components.html(html_code, height=360)
