@@ -279,4 +279,5 @@ document.addEventListener("click", e => {
 """
 
 # compact render height proportional to 640px width
-components.html(html_code, height=360)
+components.html(html_code, height=420)
+
