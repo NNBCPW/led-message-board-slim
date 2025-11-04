@@ -37,19 +37,13 @@ const TW = tileW(), TH = tileH();
 const BOARD_W = OUTER_PAD*2 + COLS*TW + (COLS-1)*TILE_GAP;
 const BOARD_H = OUTER_PAD*2 + ROWS*TH + (ROWS-1)*TILE_GAP;
 
-// ---------- CANVAS + HIDPI FIX ----------
+// ---------- CANVAS + HiDPI ----------
 const c = document.getElementById("ledBoard");
 const ctx = c.getContext("2d", { alpha:false });
-
-// internal pixel ratio (HiDPI)
 const dpr = window.devicePixelRatio || 1;
-// set internal drawing buffer in device pixels
 c.width  = Math.round(BOARD_W * dpr);
 c.height = Math.round(BOARD_H * dpr);
-// scale drawing operations so our units remain in CSS pixels
 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-// set visual CSS size to match your flashing board width
 const cssW = 640;
 c.style.width  = cssW + "px";
 c.style.height = (BOARD_H * cssW / BOARD_W) + "px";
@@ -83,7 +77,7 @@ const FONT = {
 "X":["10001","01010","00100","00100","00100","01010","10001"],
 "Y":["10001","01010","00100","00100","00100","00100","00100"],
 "Z":["11111","00001","00010","00100","01000","10000","11111"],
-"-":["00000","00000","00000","11111","00000","00000","00000"],
+
 "0":["01110","10001","10011","10101","11001","10001","01110"],
 "1":["00100","01100","00100","00100","00100","00100","01110"],
 "2":["01110","10001","00001","00110","01000","10000","11111"],
@@ -94,11 +88,39 @@ const FONT = {
 "7":["11111","00001","00010","00100","01000","01000","01000"],
 "8":["01110","10001","01110","10001","10001","10001","01110"],
 "9":["01110","10001","10001","01111","00001","00001","01110"],
+
 "!":["00100","00100","00100","00100","00100","00000","00100"],
-".":["00000","00000","00000","00000","00000","00000","00100"],
-",":["00000","00000","00000","00000","00000","00100","01000"],
-":":["00000","00100","00000","00000","00000","00100","00000"],
-"?":["01110","10001","00010","00100","00100","00000","00100"]
+"\"":["01010","01010","01010","00000","00000","00000","00000"],
+"#":["01010","11111","01010","11111","01010","00000","00000"],
+"$":["00100","01111","10100","01110","00101","11110","00100"],
+"%":["11000","11001","00010","00100","01000","10011","00011"],
+"&":["01100","10010","10100","01000","10101","10010","01101"],
+"'":["00100","00100","01000","00000","00000","00000","00000"],
+"(":["00010","00100","01000","01000","01000","00100","00010"],
+")":["01000","00100","00010","00010","00010","00100","01000"],
+"*":["00000","01010","00100","11111","00100","01010","00000"],
+"+":["00000","00100","00100","11111","00100","00100","00000"],
+",":["00000","00000","00000","00000","00100","00100","01000"],
+"-":["00000","00000","00000","11111","00000","00000","00000"],
+".":["00000","00000","00000","00000","00000","00110","00110"],
+"/":["00001","00010","00100","01000","10000","00000","00000"],
+":":["00000","00110","00110","00000","00110","00110","00000"],
+";":["00000","00110","00110","00000","00110","00110","01000"],
+"<":["00010","00100","01000","10000","01000","00100","00010"],
+"=":["00000","00000","11111","00000","11111","00000","00000"],
+">":["01000","00100","00010","00001","00010","00100","01000"],
+"?":["01110","10001","00010","00100","00100","00000","00100"],
+"@":["01110","10001","10111","10101","10111","10000","01110"],
+"[":["01110","01000","01000","01000","01000","01000","01110"],
+"\\":["10000","01000","00100","00010","00001","00000","00000"],
+"]":["01110","00010","00010","00010","00010","00010","01110"],
+"^":["00100","01010","10001","00000","00000","00000","00000"],
+"_":["00000","00000","00000","00000","00000","00000","11111"],
+"`":["01000","00100","00010","00000","00000","00000","00000"],
+"{":["00011","00100","00100","11000","00100","00100","00011"],
+"|":["00100","00100","00100","00100","00100","00100","00100"],
+"}":["11000","00100","00100","00011","00100","00100","11000"],
+"~":["00000","00000","01001","10110","00000","00000","00000"]
 };
 
 // ---------- STATE ----------
@@ -112,14 +134,11 @@ function drawDot(x,y,on){
   ctx.fillStyle = on ? LED_ON : LED_OFF;
   ctx.fill();
 }
-
 function drawTile(ch, x, y){
-  // tile background + faint outline
   ctx.fillStyle = BG_COLOR;
   ctx.fillRect(x, y, TW, TH);
   ctx.strokeStyle = GAP_LINE;
   ctx.strokeRect(x, y, TW, TH);
-
   const p = FONT[ch] || FONT[" "];
   const sx = x + TILE_PAD, sy = y + TILE_PAD;
   for(let gy=0; gy<DOT_H; gy++){
@@ -129,11 +148,9 @@ function drawTile(ch, x, y){
     }
   }
 }
-
 function drawBoard(){
   ctx.fillStyle = BG_COLOR;
   ctx.fillRect(0, 0, BOARD_W, BOARD_H);
-
   for(let r=0; r<ROWS; r++){
     for(let cidx=0; cidx<COLS; cidx++){
       const x = OUTER_PAD + cidx*(TW+TILE_GAP);
@@ -149,41 +166,26 @@ function drawBoard(){
 }
 drawBoard();
 
-// ---------- SELECTION (click) with proper HiDPI math ----------
+// ---------- CLICK (accurate on HiDPI) ----------
 c.addEventListener("click", (e)=>{
   const rect = c.getBoundingClientRect();
-  // map mouse position from CSS pixels -> canvas CSS pixels
   const mx = (e.clientX - rect.left) * (c.width / rect.width) / (window.devicePixelRatio||1);
   const my = (e.clientY - rect.top)  * (c.height/ rect.height)/ (window.devicePixelRatio||1);
-
-  const x = mx - OUTER_PAD;
-  const y = my - OUTER_PAD;
+  const x = mx - OUTER_PAD, y = my - OUTER_PAD;
   const col = Math.floor(x / (TW + TILE_GAP));
   const row = Math.floor(y / (TH + TILE_GAP));
-
-  if(row>=0 && row<ROWS && col>=0 && col<COLS){
-    active = { r:row, c:col };
-    drawBoard();
-  }
+  if(row>=0 && row<ROWS && col>=0 && col<COLS){ active = { r:row, c:col }; drawBoard(); }
 });
 
 // ---------- CURSOR MOVES ----------
 function advance(){
   active.c += 1;
-  if(active.c >= COLS){
-    active.c = 0;
-    active.r = Math.min(active.r + 1, ROWS - 1);
-  }
+  if(active.c >= COLS){ active.c = 0; active.r = Math.min(active.r + 1, ROWS - 1); }
   drawBoard();
 }
 function backspace(){
-  // move back then clear
-  if(active.c > 0){
-    active.c -= 1;
-  } else if(active.r > 0){
-    active.r -= 1;
-    active.c = COLS - 1;
-  }
+  if(active.c > 0){ active.c -= 1; }
+  else if(active.r > 0){ active.r -= 1; active.c = COLS - 1; }
   chars[active.r][active.c] = " ";
   drawBoard();
 }
@@ -196,23 +198,13 @@ document.addEventListener("keydown", (e)=>{
   if(e.key === "Enter"){ active.c = 0; active.r = Math.min(active.r+1, ROWS-1); drawBoard(); return; }
   if(e.key === " "){ e.preventDefault(); advance(); return; }
 
-  // --- expanded printable support ---
   if(e.key.length === 1){
     let ch = e.key;
-    // convert letters to uppercase so they use existing FONT patterns
-    if(/[a-z]/.test(ch)) ch = ch.toUpperCase();
-
-    // if character exists in font, use it; if not, ignore gracefully
-    if (FONT[ch]) {
-      chars[active.r][active.c] = ch;
-      advance();
-      drawBoard();
-    }
+    if(/[a-z]/.test(ch)) ch = ch.toUpperCase();   // letters use uppercase bitmaps
+    if (FONT[ch]){ chars[active.r][active.c] = ch; advance(); }
   }
 });
-
 </script>
 """
 
-# Give the component enough height so the board never clips
 components.html(html_code, height=440)
