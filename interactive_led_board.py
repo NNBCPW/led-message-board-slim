@@ -8,7 +8,8 @@ st.markdown("""
 body { background-color:#141414; }
 canvas{
   background-color:#141414;
-  display:block; margin:auto;
+  display:block; 
+  margin:auto;
   border-radius:12px;
   box-shadow:inset 0 0 30px #000;
 }
@@ -44,12 +45,58 @@ const dpr = window.devicePixelRatio || 1;
 c.width  = Math.round(BOARD_W * dpr);
 c.height = Math.round(BOARD_H * dpr);
 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-const cssW = 640;
+
+// ---------- Responsive Scaling ----------
+let cssW = 640; // desktop default
+if (window.innerWidth < 768) { // mobile
+  cssW = Math.min(window.innerWidth * 0.95, 640);
+}
 c.style.width  = cssW + "px";
 c.style.height = (BOARD_H * cssW / BOARD_W) + "px";
 
 // ---------- 5×7 FONT ----------
-const FONT = { ... };  // (same font dictionary you already have)
+const FONT = {
+" ":["00000","00000","00000","00000","00000","00000","00000"],
+"A":["01110","10001","11111","10001","10001","10001","10001"],
+"B":["11110","10001","11110","10001","10001","10001","11110"],
+"C":["01110","10001","10000","10000","10000","10001","01110"],
+"D":["11110","10001","10001","10001","10001","10001","11110"],
+"E":["11111","10000","11110","10000","10000","10000","11111"],
+"F":["11111","10000","11110","10000","10000","10000","10000"],
+"G":["01110","10001","10000","10111","10001","10001","01110"],
+"H":["10001","10001","11111","10001","10001","10001","10001"],
+"I":["01110","00100","00100","00100","00100","00100","01110"],
+"J":["00001","00001","00001","10001","10001","10001","01110"],
+"K":["10001","10010","11100","10100","10010","10001","10001"],
+"L":["10000","10000","10000","10000","10000","10000","11111"],
+"M":["10001","11011","10101","10101","10001","10001","10001"],
+"N":["10001","11001","10101","10011","10001","10001","10001"],
+"O":["01110","10001","10001","10001","10001","10001","01110"],
+"P":["11110","10001","11110","10000","10000","10000","10000"],
+"Q":["01110","10001","10001","10001","10101","10010","01101"],
+"R":["11110","10001","11110","10100","10010","10001","10001"],
+"S":["01111","10000","10000","01110","00001","00001","11110"],
+"T":["11111","00100","00100","00100","00100","00100","00100"],
+"U":["10001","10001","10001","10001","10001","10001","01110"],
+"V":["10001","10001","10001","01010","01010","00100","00100"],
+"W":["10001","10001","10101","10101","10101","11011","10001"],
+"X":["10001","01010","00100","00100","00100","01010","10001"],
+"Y":["10001","01010","00100","00100","00100","00100","00100"],
+"Z":["11111","00001","00010","00100","01000","10000","11111"],
+"-":["00000","00000","00000","11111","00000","00000","00000"],
+"!":["00100","00100","00100","00100","00100","00000","00100"],
+"0":["01110","10001","10011","10101","11001","10001","01110"],
+"1":["00100","01100","00100","00100","00100","00100","01110"],
+"2":["01110","10001","00001","00110","01000","10000","11111"],
+"3":["11110","00001","01110","00001","00001","00001","11110"],
+"4":["00010","00110","01010","10010","11111","00010","00010"],
+"5":["11111","10000","11110","00001","00001","10001","01110"],
+"6":["01110","10000","11110","10001","10001","10001","01110"],
+"7":["11111","00001","00010","00100","01000","01000","01000"],
+"8":["01110","10001","01110","10001","10001","10001","01110"],
+"9":["01110","10001","10001","01111","00001","00001","01110"],
+".":["00000","00000","00000","00000","00000","00000","00100"]
+};
 
 // ---------- STATE ----------
 let chars = Array.from({length:ROWS}, ()=>Array(COLS).fill(" "));
@@ -94,17 +141,23 @@ function drawBoard(){
 }
 drawBoard();
 
-// ---------- MOBILE FOCUS + CLICK ----------
+// ---------- MOBILE KEYBOARD HANDLER ----------
 const hiddenInput = document.createElement("input");
 hiddenInput.type = "text";
-hiddenInput.style.position = "absolute";
+hiddenInput.style.position = "fixed";
 hiddenInput.style.opacity = 0;
-hiddenInput.style.height = 0;
-hiddenInput.style.width = 0;
-hiddenInput.style.zIndex = -1;
+hiddenInput.style.bottom = "0px";
+hiddenInput.style.height = "1px";
+hiddenInput.style.width = "1px";
+hiddenInput.style.zIndex = 100;
 document.body.appendChild(hiddenInput);
 
-c.addEventListener("click", (e)=>{
+function focusInput() { hiddenInput.focus(); }
+
+// ---------- CLICK / TOUCH ----------
+c.addEventListener("click", handleInputFocus);
+c.addEventListener("touchstart", handleInputFocus, {passive:true});
+function handleInputFocus(e){
   const rect = c.getBoundingClientRect();
   const mx = (e.clientX - rect.left) * (c.width / rect.width) / (window.devicePixelRatio||1);
   const my = (e.clientY - rect.top)  * (c.height/ rect.height)/ (window.devicePixelRatio||1);
@@ -114,9 +167,9 @@ c.addEventListener("click", (e)=>{
   if(row>=0 && row<ROWS && col>=0 && col<COLS){
     active = { r:row, c:col };
     drawBoard();
-    hiddenInput.focus(); // mobile keyboard trigger
+    focusInput(); // open keyboard
   }
-});
+}
 
 // ---------- CURSOR MOVES ----------
 function advance(){
@@ -134,7 +187,6 @@ function backspace(){
 // ---------- TYPING ----------
 document.addEventListener("keydown", (e)=>{
   if(active.r < 0) return;
-
   if(e.key === "Backspace"){ e.preventDefault(); backspace(); return; }
   if(e.key === "Enter"){ active.c = 0; active.r = Math.min(active.r+1, ROWS-1); drawBoard(); return; }
   if(e.key === " "){ e.preventDefault(); advance(); return; }
