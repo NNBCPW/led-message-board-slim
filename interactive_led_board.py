@@ -201,3 +201,5 @@ document.addEventListener("keydown", (e)=>{
 """
 
 components.html(html_code, height=440)
+st.markdown("---")
+st.caption("Created by NN.")
