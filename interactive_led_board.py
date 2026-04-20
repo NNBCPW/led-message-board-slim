@@ -514,7 +514,6 @@ focusInput();
 </body>
 </html>
 """
-
 components.html(html_code, height=720)
 st.markdown("---")
 st.caption("Created by NN.")
