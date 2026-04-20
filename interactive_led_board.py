@@ -514,6 +514,6 @@ focusInput();
 </body>
 </html>
 """
-components.html(html_code, height=520)
-st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
-st.markdown("<div style='margin-top:4px; color:#aaa;'>Created by NN.</div>", unsafe_allow_html=True)
+components.html(html_code, height=630, scrolling=False)
+st.markdown("<hr style='margin:8px 0;'>", unsafe_allow_html=True)
+st.markdown("<div style='margin-top:2px; color:#aaa;'>Created by NN.</div>", unsafe_allow_html=True)
